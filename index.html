@@ -1,904 +1,1140 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>たのしく！やくぶんれんしゅう</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@600;800;900&display=swap" rel="stylesheet">
-    <!-- Canvas Confetti Library -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV用 かんたん約分プラクティス</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"M PLUS Rounded 1c"', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-    <style>
-        /* 徹底的なボックスサイジングとスクロール禁止 */
-        *, *::before, *::after {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+    /* 1920x1080 基準のステージ */
+    #app-viewport {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
 
-        html, body {
-            width: 100vw;
-            height: 100vh;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: #1e1035;
-            background: radial-gradient(circle at center, #2e1852 0%, #0f071e 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-        }
+    #app-container {
+      width: 1920px;
+      height: 1080px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      position: absolute;
+      transform-origin: center center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-        /* 16:9比率を厳密に保持し、最大サイズで中央に収まるレスポンシブコンテナ */
-        #appContainer {
-            width: 100vw;
-            height: calc(100vw * 9 / 16);
-            max-height: 100vh;
-            max-width: calc(100vh * 16 / 9);
-            aspect-ratio: 16 / 9;
-            position: relative;
-            background-color: #fffaf0;
-            background-image: radial-gradient(#ffd8a8 2px, transparent 2px);
-            background-size: 24px 24px;
-            box-shadow: 0 0 60px rgba(0, 0, 0, 0.7);
-            border-radius: 1.25rem;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            /* Container queries enabled for responsive inner components */
-            container-type: inline-size;
-        }
+    /* ヘッダー */
+    header {
+      height: 100px;
+      padding: 0 40px;
+      background: rgba(30, 41, 59, 0.8);
+      border-bottom: 4px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-        /* アニメーション & エフェクト */
-        .btn-push {
-            transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.18);
-        }
-        .btn-push:active {
-            transform: translateY(3px) !important;
-            box-shadow: 0 1px 0 rgba(0,0,0,0.18) !important;
-        }
+    .title-area {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
 
-        /* フォーカスリング (テレビのリモコン用) */
-        .focusable:focus-visible, .focusable:hover {
-            outline: 4px solid #ff4757;
-            outline-offset: 2px;
-            transform: scale(1.02);
-        }
+    .title-area h1 {
+      font-size: 42px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-shadow: 0 2px 10px rgba(56, 189, 248, 0.3);
+    }
 
-        /* 入力ボックスのアクティブ状態 */
-        .input-box-active {
-            border-color: #ff4757 !important;
-            background-color: #fff0f3 !important;
-            box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.35) !important;
-        }
+    .badge {
+      background-color: #f59e0b;
+      color: #0f172a;
+      font-size: 22px;
+      font-weight: bold;
+      padding: 6px 16px;
+      border-radius: 20px;
+    }
 
-        /* はなまるスタンプアニメーション */
-        @keyframes stampPop {
-            0% { transform: scale(3) rotate(-25deg); opacity: 0; }
-            70% { transform: scale(0.9) rotate(5deg); opacity: 1; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-        .animate-stamp {
-            animation: stampPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
+    .header-controls {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
 
-        /* 画面フェード */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.97); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        .fade-in {
-            animation: fadeIn 0.25s ease-out forwards;
-        }
-    </style>
+    .tv-btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 28px;
+      font-size: 24px;
+      font-weight: bold;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      transition: all 0.2s;
+    }
+
+    .tv-btn:hover {
+      background: #2563eb;
+      transform: scale(1.05);
+    }
+
+    /* メインコンテンツエリア */
+    main {
+      flex: 1;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .screen {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .screen.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* スタート画面 */
+    .start-card {
+      background: rgba(30, 41, 59, 0.9);
+      border: 4px solid #475569;
+      border-radius: 32px;
+      padding: 50px;
+      width: 1600px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+
+    .menu-section {
+      margin-bottom: 40px;
+    }
+
+    .menu-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    .menu-title.easy { color: #4ade80; }
+    .menu-title.hard { color: #fb923c; }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .mode-btn {
+      border: none;
+      padding: 24px;
+      font-size: 32px;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
+      color: white;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.3);
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mode-btn:active {
+      transform: translateY(6px);
+      box-shadow: 0 2px 0 rgba(0,0,0,0.3);
+    }
+
+    .mode-btn.easy-btn {
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      border: 3px solid #4ade80;
+    }
+
+    .mode-btn.easy-btn:hover {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+
+    .mode-btn.hard-btn {
+      background: linear-gradient(135deg, #ea580c, #c2410c);
+      border: 3px solid #fb923c;
+    }
+
+    .mode-btn.hard-btn:hover {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+    }
+
+    .sub-text {
+      font-size: 20px;
+      opacity: 0.9;
+      font-weight: normal;
+    }
+
+    /* ゲームプレイ画面 */
+    .game-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      width: 1700px;
+      height: 880px;
+    }
+
+    /* 左側：問題 & ピザ表示 */
+    .left-panel {
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 28px;
+      border: 3px solid #334155;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      background: #0f172a;
+      height: 24px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid #334155;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .problem-box {
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      margin: 20px 0;
+    }
+
+    .fraction-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 80px;
+      font-weight: bold;
+      color: #f8fafc;
+    }
+
+    .fraction-line {
+      width: 140px;
+      height: 8px;
+      background-color: #f8fafc;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+
+    .equals-sign {
+      font-size: 80px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+
+    /* 解答入力部分 */
+    .input-fraction {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .input-box {
+      width: 140px;
+      height: 110px;
+      background: #0f172a;
+      border: 5px solid #475569;
+      border-radius: 20px;
+      font-size: 72px;
+      font-weight: bold;
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .input-box.active {
+      border-color: #38bdf8;
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.6);
+      background: #1e293b;
+    }
+
+    .viz-container {
+      width: 100%;
+      height: 320px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 20px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 20px;
+      border: 2px dashed #475569;
+    }
+
+    .viz-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .viz-item canvas {
+      background: transparent;
+    }
+
+    .viz-label {
+      font-size: 22px;
+      color: #94a3b8;
+      font-weight: bold;
+    }
+
+    /* 右側：キーパッド & ヒント */
+    .right-panel {
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 28px;
+      border: 3px solid #334155;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      justify-content: space-between;
+    }
+
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+    }
+
+    .num-btn {
+      height: 110px;
+      background: #334155;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 48px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #1e293b;
+      transition: all 0.1s;
+    }
+
+    .num-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #1e293b;
+    }
+
+    .num-btn.clear-btn {
+      background: #e11d48;
+      box-shadow: 0 6px 0 #9f1239;
+      font-size: 28px;
+    }
+
+    .num-btn.clear-btn:active {
+      box-shadow: 0 2px 0 #9f1239;
+    }
+
+    .hints-container {
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 20px;
+      padding: 20px;
+      border: 2px solid #334155;
+    }
+
+    .hint-title {
+      font-size: 24px;
+      color: #f59e0b;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .hint-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .hint-btn {
+      flex: 1;
+      height: 70px;
+      background: #475569;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 26px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .hint-btn.active {
+      background: #f59e0b;
+      color: #0f172a;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+    }
+
+    .submit-btn {
+      height: 110px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      font-size: 44px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 8px 0 #14532d;
+      transition: all 0.15s;
+    }
+
+    .submit-btn:active {
+      transform: translateY(6px);
+      box-shadow: 0 2px 0 #14532d;
+    }
+
+    /* フィードバック演出 */
+    .feedback-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .hanamaru {
+      width: 400px;
+      height: 400px;
+      border: 20px solid #ef4444;
+      border-radius: 50%;
+      color: #ef4444;
+      font-size: 160px;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transform: scale(0) rotate(-20deg);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .hanamaru.show {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+
+    /* リザルト画面 */
+    .result-card {
+      background: rgba(30, 41, 59, 0.95);
+      border: 4px solid #38bdf8;
+      border-radius: 36px;
+      padding: 60px;
+      width: 1200px;
+      text-align: center;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .result-title {
+      font-size: 64px;
+      color: #38bdf8;
+      font-weight: 800;
+    }
+
+    .result-score {
+      font-size: 100px;
+      font-weight: 900;
+      color: #facc15;
+      text-shadow: 0 4px 20px rgba(250, 204, 21, 0.4);
+    }
+
+    .result-stats {
+      font-size: 36px;
+      color: #cbd5e1;
+      display: flex;
+      gap: 60px;
+    }
+
+    .restart-btn {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      color: white;
+      border: none;
+      padding: 24px 80px;
+      font-size: 40px;
+      font-weight: bold;
+      border-radius: 24px;
+      cursor: pointer;
+      box-shadow: 0 8px 0 #1e40af;
+      transition: all 0.2s;
+      margin-top: 20px;
+    }
+
+    .restart-btn:hover {
+      transform: scale(1.05);
+    }
+
+    /* Confetti Canvas */
+    #confetti-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 90;
+    }
+  </style>
 </head>
 <body>
 
-    <!-- 16:9 TV CONTAINER -->
-    <div id="appContainer">
+  <div id="app-viewport">
+    <div id="app-container">
+      <!-- ヘッダー -->
+      <header>
+        <div class="title-area">
+          <h1>約分プラクティス</h1>
+          <span class="badge" id="mode-badge">初級モード</span>
+        </div>
+        <div class="header-controls">
+          <button class="tv-btn" id="fullscreen-btn">📺 テレビモード</button>
+        </div>
+      </header>
 
-        <!-- ================= HEADER BAR ================= -->
-        <header class="w-full h-[12%] bg-white/90 backdrop-blur border-b-2 border-amber-200 px-4 flex items-center justify-between z-10 shrink-0">
-            <div class="flex items-center space-x-2">
-                <span class="text-2xl md:text-3xl">✏️</span>
-                <h1 class="text-lg md:text-2xl font-black text-rose-500 tracking-wide">
-                    テレビでたのしく！やくぶんれんしゅう
-                </h1>
+      <!-- メインエリア -->
+      <main>
+        <canvas id="confetti-canvas"></canvas>
+        <div class="feedback-overlay">
+          <div class="hanamaru" id="hanamaru">💮</div>
+        </div>
+
+        <!-- 1. スタート画面 -->
+        <section id="start-screen" class="screen active">
+          <div class="start-card">
+            <!-- 初級セクション -->
+            <div class="menu-section">
+              <div class="menu-title easy">
+                <span>🌱 初級（まずはここから！ わり算1回でできる）</span>
+              </div>
+              <div class="button-row">
+                <button class="mode-btn easy-btn" onclick="startGame('easy', 5)">
+                  5もん
+                  <span class="sub-text">サクッと練習</span>
+                </button>
+                <button class="mode-btn easy-btn" onclick="startGame('easy', 10)">
+                  10もん
+                  <span class="sub-text">しっかり練習</span>
+                </button>
+                <button class="mode-btn easy-btn" onclick="startGame('easy', 20)">
+                  20もん
+                  <span class="sub-text">たっぷりバッチリ</span>
+                </button>
+                <button class="mode-btn easy-btn" onclick="startGame('easy', Infinity)">
+                  むげん
+                  <span class="sub-text">ずっと挑戦</span>
+                </button>
+              </div>
             </div>
 
-            <div class="flex items-center space-x-3">
-                <!-- タイマー -->
-                <div id="timerBadge" class="hidden items-center bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl text-amber-900 font-extrabold text-sm md:text-base">
-                    <span>⏱️</span><span id="timerText" class="ml-1 font-mono">00:00</span>
-                </div>
-
-                <!-- スコア -->
-                <div class="flex items-center space-x-1.5 bg-yellow-100 border border-yellow-300 px-3 py-1 rounded-xl">
-                    <span class="text-lg md:text-xl">⭐</span>
-                    <span id="starScore" class="text-lg md:text-xl font-black text-amber-600">0</span>
-                </div>
-
-                <!-- 効果音オン/オフ -->
-                <button id="soundToggleBtn" class="focusable bg-sky-100 hover:bg-sky-200 text-sky-900 px-2.5 py-1 rounded-xl font-bold text-xs md:text-sm border border-sky-300 flex items-center gap-1">
-                    <span id="soundIcon">🔊</span> <span id="soundLabel">おと: オン</span>
+            <!-- 上級セクション -->
+            <div class="menu-section" style="margin-bottom: 0;">
+              <div class="menu-title hard">
+                <span>🔥 上級（すこし難しい問題にチャレンジ！）</span>
+              </div>
+              <div class="button-row">
+                <button class="mode-btn hard-btn" onclick="startGame('hard', 5)">
+                  5もん
+                  <span class="sub-text">サクッと挑戦</span>
                 </button>
-
-                <!-- テレビモード（フルスクリーン） -->
-                <button id="tvModeBtn" class="focusable bg-purple-100 hover:bg-purple-200 text-purple-900 px-2.5 py-1 rounded-xl font-bold text-xs md:text-sm border border-purple-300 flex items-center gap-1">
-                    📺 テレビモード
+                <button class="mode-btn hard-btn" onclick="startGame('hard', 10)">
+                  10もん
+                  <span class="sub-text">しっかり挑戦</span>
                 </button>
+                <button class="mode-btn hard-btn" onclick="startGame('hard', 20)">
+                  20もん
+                  <span class="sub-text">たっぷり挑戦</span>
+                </button>
+                <button class="mode-btn hard-btn" onclick="startGame('hard', Infinity)">
+                  むげん
+                  <span class="sub-text">ずっと挑戦</span>
+                </button>
+              </div>
             </div>
-        </header>
+          </div>
+        </section>
 
-        <!-- ================= MAIN CONTENT AREA ================= -->
-        <main class="w-full h-[88%] relative overflow-hidden">
+        <!-- 2. ゲームプレイ画面 -->
+        <section id="game-screen" class="screen">
+          <div class="game-layout">
+            <!-- 左パネル：問題とピザ -->
+            <div class="left-panel">
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+              </div>
 
-            <!-- ---------------- 1. START SCREEN ---------------- -->
-            <section id="startScreen" class="w-full h-full flex flex-col items-center justify-between p-6 fade-in">
-                <div class="text-center mt-2">
-                    <span class="bg-yellow-200 text-amber-900 font-extrabold text-sm md:text-base px-6 py-1.5 rounded-full border-2 border-yellow-400 inline-block mb-3 shadow-sm">
-                        ✨ ２・３・５で わる かんたん約分 ✨
-                    </span>
-                    <h2 class="text-3xl md:text-5xl font-black text-gray-800 tracking-tight">
-                        何問れんしゅう する？
-                    </h2>
+              <div class="problem-box">
+                <!-- 元の分数 -->
+                <div class="fraction-display">
+                  <span id="orig-num">6</span>
+                  <div class="fraction-line"></div>
+                  <span id="orig-den">8</span>
                 </div>
 
-                <!-- 問題数選択ボタン（グリッド） -->
-                <div class="grid grid-cols-4 gap-4 md:gap-6 w-full max-w-4xl px-4 my-auto">
-                    <button data-count="5" class="mode-select-btn focusable btn-push bg-white border-4 border-rose-400 hover:bg-rose-50 rounded-3xl p-4 md:p-6 flex flex-col items-center justify-center space-y-2 cursor-pointer">
-                        <span class="text-4xl md:text-5xl">🌱</span>
-                        <span class="text-2xl md:text-4xl font-black text-rose-500">5 もん</span>
-                        <span class="text-xs md:text-sm font-bold text-gray-400">サクッと</span>
-                    </button>
+                <div class="equals-sign">=</div>
 
-                    <button data-count="10" class="mode-select-btn focusable btn-push bg-white border-4 border-sky-400 hover:bg-sky-50 rounded-3xl p-4 md:p-6 flex flex-col items-center justify-center space-y-2 cursor-pointer">
-                        <span class="text-4xl md:text-5xl">⭐</span>
-                        <span class="text-2xl md:text-4xl font-black text-sky-500">10 もん</span>
-                        <span class="text-xs md:text-sm font-bold text-gray-400">しっかり</span>
-                    </button>
-
-                    <button data-count="20" class="mode-select-btn focusable btn-push bg-white border-4 border-emerald-400 hover:bg-emerald-50 rounded-3xl p-4 md:p-6 flex flex-col items-center justify-center space-y-2 cursor-pointer">
-                        <span class="text-4xl md:text-5xl">🔥</span>
-                        <span class="text-2xl md:text-4xl font-black text-emerald-500">20 もん</span>
-                        <span class="text-xs md:text-sm font-bold text-gray-400">じっくり</span>
-                    </button>
-
-                    <button data-count="infinite" class="mode-select-btn focusable btn-push bg-white border-4 border-purple-400 hover:bg-purple-50 rounded-3xl p-4 md:p-6 flex flex-col items-center justify-center space-y-2 cursor-pointer">
-                        <span class="text-4xl md:text-5xl">♾️</span>
-                        <span class="text-2xl md:text-4xl font-black text-purple-600">むげん</span>
-                        <span class="text-xs md:text-sm font-bold text-gray-400">せいげんなし</span>
-                    </button>
+                <!-- 解答入力欄（上が分子、下が分母） -->
+                <div class="input-fraction">
+                  <!-- 分子（上） -->
+                  <div class="input-box" id="input-num" onclick="selectInput('num')"></div>
+                  <div class="fraction-line"></div>
+                  <!-- 分母（下） -->
+                  <div class="input-box" id="input-den" onclick="selectInput('den')"></div>
                 </div>
+              </div>
 
-                <!-- スタート/操作ガイダンス -->
-                <div class="mb-2 bg-amber-100 border border-amber-300 px-6 py-2 rounded-2xl text-amber-900 font-extrabold text-xs md:text-sm flex items-center gap-2">
-                    <span>🎮</span> <span>リモコンの <b>矢印キー</b> でえらんで <b>決定 (Enter)</b> ボタンを押してね！</span>
+              <!-- ピザ（円グラフ）図解 -->
+              <div class="viz-container">
+                <div class="viz-item">
+                  <canvas id="viz-orig" width="220" height="220"></canvas>
+                  <span class="viz-label">もとの大きさ</span>
                 </div>
-            </section>
-
-
-            <!-- ---------------- 2. PRACTICE SCREEN (16:9 SPLIT) ---------------- -->
-            <section id="gameScreen" class="w-full h-full hidden flex-row p-3 md:p-4 gap-3 md:gap-4 relative">
-
-                <!-- はなまるスタンプオーバーレイ -->
-                <div id="stampOverlay" class="absolute inset-0 pointer-events-none flex items-center justify-center z-40 hidden">
-                    <div class="animate-stamp text-center">
-                        <div class="text-8xl md:text-9xl text-rose-500 drop-shadow-2xl font-black">💮</div>
-                        <div class="text-2xl md:text-3xl font-black text-rose-600 bg-white/95 px-8 py-2 rounded-full border-4 border-rose-500 shadow-2xl -mt-4 inline-block">
-                            だいせいかい！
-                        </div>
-                    </div>
+                <div class="viz-item">
+                  <canvas id="viz-ans" width="220" height="220"></canvas>
+                  <span class="viz-label">あなたのこたえ</span>
                 </div>
+              </div>
+            </div>
 
-                <!-- LEFT HALF: QUESTION & PIZZA GRAPHIC (58%) -->
-                <div class="w-[58%] h-full flex flex-col justify-between bg-white/85 backdrop-blur rounded-2xl p-3 md:p-4 border-2 border-amber-200 shadow-sm overflow-hidden">
-                    
-                    <!-- 進捗 & アシストヘッダー -->
-                    <div class="flex justify-between items-center border-b border-amber-200 pb-1.5 shrink-0">
-                        <span id="questionNumText" class="text-base md:text-xl font-black text-amber-900">だい 1 もん</span>
-                        <button id="togglePizzaBtn" class="focusable bg-indigo-100 hover:bg-indigo-200 text-indigo-900 px-3 py-1 rounded-xl font-bold text-xs md:text-sm border border-indigo-300">
-                            🍕 ずかい(ピザ) を切替
-                        </button>
-                    </div>
+            <!-- 右パネル：テンキー・ヒント -->
+            <div class="right-panel">
+              <div class="numpad">
+                <button class="num-btn" onclick="pressNum(1)">1</button>
+                <button class="num-btn" onclick="pressNum(2)">2</button>
+                <button class="num-btn" onclick="pressNum(3)">3</button>
+                <button class="num-btn" onclick="pressNum(4)">4</button>
+                <button class="num-btn" onclick="pressNum(5)">5</button>
+                <button class="num-btn" onclick="pressNum(6)">6</button>
+                <button class="num-btn" onclick="pressNum(7)">7</button>
+                <button class="num-btn" onclick="pressNum(8)">8</button>
+                <button class="num-btn" onclick="pressNum(9)">9</button>
+                <button class="num-btn clear-btn" onclick="pressClear()">なおす</button>
+              </div>
 
-                    <!-- 数式エリア (問題 ＝ 解答入力) -->
-                    <div class="flex justify-center items-center gap-4 md:gap-8 my-auto">
-                        <!-- 元の問題分数 -->
-                        <div class="flex flex-col items-center">
-                            <span class="text-xs font-extrabold text-gray-500 mb-1">もんだい</span>
-                            <div class="bg-amber-50 border-4 border-amber-300 rounded-2xl px-5 py-3 md:px-7 md:py-4 flex flex-col items-center justify-center min-w-[100px] md:min-w-[130px] shadow-inner">
-                                <span id="qNumerator" class="text-4xl md:text-6xl font-black text-gray-800">6</span>
-                                <div class="w-full h-1.5 md:h-2 bg-gray-700 rounded-full my-1 md:my-2"></div>
-                                <span id="qDenominator" class="text-4xl md:text-6xl font-black text-gray-800">12</span>
-                            </div>
-                        </div>
-
-                        <!-- イコール記号 -->
-                        <span class="text-4xl md:text-6xl font-black text-rose-500">＝</span>
-
-                        <!-- ユーザー解答入力欄 -->
-                        <div class="flex flex-col items-center">
-                            <span class="text-xs font-extrabold text-rose-500 mb-1">やくぶんした こたえ</span>
-                            <div class="bg-rose-50 border-4 border-rose-300 rounded-2xl px-4 py-2 md:px-6 md:py-3 flex flex-col items-center justify-center min-w-[110px] md:min-w-[140px] shadow-md">
-                                <!-- 分子入力 -->
-                                <button id="inputNumBtn" class="focusable input-box-active w-20 h-12 md:w-24 md:h-16 bg-white rounded-xl border-3 border-gray-300 text-3xl md:text-4xl font-black text-rose-600 flex items-center justify-center transition-all">
-                                    <span id="ansNumText">?</span>
-                                </button>
-                                <div class="w-full h-1.5 md:h-2 bg-rose-500 rounded-full my-1 md:my-1.5"></div>
-                                <!-- 分母入力 -->
-                                <button id="inputDenBtn" class="focusable w-20 h-12 md:w-24 md:h-16 bg-white rounded-xl border-3 border-gray-300 text-3xl md:text-4xl font-black text-rose-600 flex items-center justify-center transition-all">
-                                    <span id="ansDenText">?</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ピザ図解エリア (Canvas) -->
-                    <div id="pizzaArea" class="bg-emerald-50 border border-emerald-200 rounded-xl p-2 flex justify-around items-center h-[34%] shrink-0">
-                        <div class="flex flex-col items-center h-full justify-center">
-                            <span class="text-xs font-bold text-emerald-900 mb-0.5">もんだい: <span id="pizzaOrigText">6/12</span></span>
-                            <canvas id="pizzaOrigCanvas" width="80" height="80" class="bg-white rounded-full border border-emerald-300 shadow-sm max-h-[70%] aspect-square"></canvas>
-                        </div>
-                        <span class="text-2xl font-black text-emerald-600">＝</span>
-                        <div class="flex flex-col items-center h-full justify-center">
-                            <span class="text-xs font-bold text-emerald-900 mb-0.5">あなたのこたえ: <span id="pizzaAnsText">?/?</span></span>
-                            <canvas id="pizzaAnsCanvas" width="80" height="80" class="bg-white rounded-full border border-emerald-300 shadow-sm max-h-[70%] aspect-square"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- ボトムナビゲーション -->
-                    <div class="flex justify-between items-center mt-1 shrink-0">
-                        <button id="exitGameBtn" class="focusable bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-3 py-1.5 rounded-xl text-xs md:text-sm border border-gray-300">
-                            🏠 やめる
-                        </button>
-                        <button id="skipGameBtn" class="focusable bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold px-3 py-1.5 rounded-xl text-xs md:text-sm border border-amber-400">
-                            パスする ➔
-                        </button>
-                    </div>
+              <div class="hints-container">
+                <div class="hint-title">💡 なんの数でわれるかな？</div>
+                <div class="hint-buttons">
+                  <button class="hint-btn" id="hint-2" onclick="checkHint(2)">2でわる</button>
+                  <button class="hint-btn" id="hint-3" onclick="checkHint(3)">3でわる</button>
+                  <button class="hint-btn" id="hint-5" onclick="checkHint(5)">5でわる</button>
                 </div>
+              </div>
 
-                <!-- RIGHT HALF: NUMERIC KEYPAD & HINTS (42%) -->
-                <div class="w-[42%] h-full flex flex-col justify-between bg-white/85 backdrop-blur rounded-2xl p-3 md:p-4 border-2 border-amber-200 shadow-sm overflow-hidden">
-                    
-                    <!-- 割り算ヒントボタン -->
-                    <div>
-                        <span class="text-xs font-black text-sky-900 block mb-1">💡 両方われる数（ヒント）</span>
-                        <div class="grid grid-cols-3 gap-1.5 md:gap-2">
-                            <button data-div="2" class="hint-btn focusable btn-push bg-sky-100 hover:bg-sky-200 text-sky-900 font-black py-1.5 md:py-2 rounded-xl border border-sky-300 text-xs md:text-sm">
-                                [ 2 ] でわる
-                            </button>
-                            <button data-div="3" class="hint-btn focusable btn-push bg-sky-100 hover:bg-sky-200 text-sky-900 font-black py-1.5 md:py-2 rounded-xl border border-sky-300 text-xs md:text-sm">
-                                [ 3 ] でわる
-                            </button>
-                            <button data-div="5" class="hint-btn focusable btn-push bg-sky-100 hover:bg-sky-200 text-sky-900 font-black py-1.5 md:py-2 rounded-xl border border-sky-300 text-xs md:text-sm">
-                                [ 5 ] でわる
-                            </button>
-                        </div>
-                    </div>
+              <button class="submit-btn" onclick="checkAnswer()">こたえあわせ</button>
+            </div>
+          </div>
+        </section>
 
-                    <!-- 数字キーパッド (0-9) -->
-                    <div class="grid grid-cols-5 gap-1.5 md:gap-2 my-auto">
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="1">1</button>
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="2">2</button>
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="3">3</button>
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="4">4</button>
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="5">5</button>
-                        
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="6">6</button>
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="7">7</button>
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="8">8</button>
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="9">9</button>
-                        <button class="key-btn focusable btn-push bg-gray-100 hover:bg-rose-100 text-gray-800 text-2xl md:text-3xl font-black py-2 md:py-3 rounded-xl border border-gray-300" data-num="0">0</button>
-                    </div>
+        <!-- 3. リザルト画面 -->
+        <section id="result-screen" class="screen">
+          <div class="result-card">
+            <div class="result-title">クリア！ おめでとう！</div>
+            <div class="result-score" id="result-score">10 / 10 問正解</div>
+            <div class="result-stats">
+              <span>⏱️ かかったじかん: <strong id="result-time" style="color: #38bdf8;">00:45</strong></span>
+            </div>
+            <button class="restart-btn" onclick="showStartScreen()">もういちどあそぶ</button>
+          </div>
+        </section>
 
-                    <!-- 補助入力キー -->
-                    <div class="flex gap-2 mb-1">
-                        <button id="bsKeyBtn" class="focusable btn-push flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-2 rounded-xl border border-amber-300 text-xs md:text-sm flex justify-center items-center gap-1">
-                            ⌫ 1文字消す
-                        </button>
-                        <button id="clearKeyBtn" class="focusable btn-push flex-1 bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold py-2 rounded-xl border border-rose-300 text-xs md:text-sm flex justify-center items-center gap-1">
-                            🧹 クリア
-                        </button>
-                        <button id="switchTargetBtn" class="focusable btn-push flex-1 bg-sky-100 hover:bg-sky-200 text-sky-900 font-bold py-2 rounded-xl border border-sky-300 text-xs md:text-sm flex justify-center items-center gap-1">
-                            ⇅ 分子/分母
-                        </button>
-                    </div>
-
-                    <!-- 答えあわせボタン -->
-                    <button id="submitAnswerBtn" class="focusable btn-push w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xl md:text-3xl font-black py-3 md:py-4 rounded-2xl border-b-4 border-emerald-700 shadow-md flex justify-center items-center gap-2">
-                        ⭕ こたえあわせ！
-                    </button>
-                </div>
-
-            </section>
-
-
-            <!-- ---------------- 3. RESULT REPORT SCREEN ---------------- -->
-            <section id="resultScreen" class="w-full h-full hidden flex-col items-center justify-center p-6 fade-in">
-                <div class="bg-white/95 rounded-3xl p-6 md:p-8 border-4 border-yellow-400 shadow-2xl max-w-xl w-full flex flex-col items-center text-center">
-                    
-                    <div class="text-6xl md:text-7xl mb-1">🏆</div>
-                    <h2 class="text-3xl md:text-4xl font-black text-rose-500 mb-1">ぜんぶ クリア！</h2>
-                    <p class="text-sm md:text-base font-bold text-gray-600 mb-5">たいへん よくできました！</p>
-
-                    <!-- スコア概要カード -->
-                    <div class="grid grid-cols-2 gap-4 w-full bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-4 mb-6">
-                        <div class="flex flex-col items-center">
-                            <span class="text-xs font-bold text-gray-500">ゲットしたほし</span>
-                            <span id="finalStars" class="text-2xl md:text-3xl font-black text-amber-600">⭐ 0</span>
-                        </div>
-                        <div class="flex flex-col items-center border-l border-yellow-200">
-                            <span class="text-xs font-bold text-gray-500">クリアタイム</span>
-                            <span id="finalTime" class="text-2xl md:text-3xl font-black text-sky-600">00:00</span>
-                        </div>
-                    </div>
-
-                    <!-- リトライ/スタート画面に戻る -->
-                    <div class="flex gap-4 w-full">
-                        <button id="retryBtn" class="focusable btn-push flex-1 bg-rose-500 hover:bg-rose-600 text-white font-black text-lg md:text-xl py-3 rounded-2xl shadow-md border-b-4 border-rose-700">
-                            もういちど やる！
-                        </button>
-                        <button id="homeBtn" class="focusable btn-push flex-1 bg-amber-400 hover:bg-amber-500 text-amber-950 font-black text-lg md:text-xl py-3 rounded-2xl shadow-md border-b-4 border-amber-600">
-                            スタートへ
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-        </main>
+      </main>
     </div>
+  </div>
 
-    <!-- AUDIO & GAME SYSTEM LOGIC -->
-    <script>
-        /* ===================================================================
-           1. WEB AUDIO API (EFFECT SOUNDS)
-           =================================================================== */
-        class SoundManager {
-            constructor() {
-                this.ctx = null;
-                this.enabled = true;
-            }
+  <script>
+    /* ===================================================
+       1. 1920x1080 画面への自動ストレッチ・フィット処理
+       =================================================== */
+    function resizeApp() {
+      const container = document.getElementById('app-container');
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
 
-            init() {
-                if (!this.ctx) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioCtx();
-                }
-            }
+      const baseWidth = 1920;
+      const baseHeight = 1080;
 
-            playCorrect() {
-                if (!this.enabled) return;
-                this.init();
-                const now = this.ctx.currentTime;
-                const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-                freqs.forEach((f, i) => {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(f, now + i * 0.08);
-                    gain.gain.setValueAtTime(0.2, now + i * 0.08);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    osc.start(now + i * 0.08);
-                    osc.stop(now + i * 0.08 + 0.35);
-                });
-            }
+      // 16:9を維持するスケール値を計算
+      const scaleX = windowWidth / baseWidth;
+      const scaleY = windowHeight / baseHeight;
+      const scale = Math.min(scaleX, scaleY);
 
-            playWrong() {
-                if (!this.enabled) return;
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(160, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.25);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.25);
-            }
+      container.style.transform = `scale(${scale})`;
+    }
 
-            playTap() {
-                if (!this.enabled) return;
-                this.init();
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(500, now);
-                osc.frequency.exponentialRampToValueAtTime(800, now + 0.04);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.04);
-            }
+    window.addEventListener('resize', resizeApp);
+    window.addEventListener('DOMContentLoaded', resizeApp);
 
-            playFanfare() {
-                if (!this.enabled) return;
-                this.init();
-                const now = this.ctx.currentTime;
-                const notes = [
-                    {f: 523.25, t: 0, d: 0.12},
-                    {f: 523.25, t: 0.12, d: 0.12},
-                    {f: 523.25, t: 0.24, d: 0.12},
-                    {f: 659.25, t: 0.36, d: 0.3},
-                    {f: 783.99, t: 0.66, d: 0.4}
-                ];
-                notes.forEach(n => {
-                    const osc = this.ctx.createOscillator();
-                    const gain = this.ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(n.f, now + n.t);
-                    gain.gain.setValueAtTime(0.2, now + n.t);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + n.t + n.d);
-                    osc.connect(gain);
-                    gain.connect(this.ctx.destination);
-                    osc.start(now + n.t);
-                    osc.stop(now + n.t + n.d);
-                });
-            }
-        }
+    /* フルスクリーン切り替え */
+    document.getElementById('fullscreen-btn').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log(err));
+      } else {
+        document.exitFullscreen();
+      }
+    });
 
-        const snd = new SoundManager();
+    /* ===================================================
+       2. Web Audio API 音声効果音
+       =================================================== */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        /* ===================================================================
-           2. FRACTION QUESTION GENERATOR
-           =================================================================== */
-        function gcd(a, b) {
-            return b === 0 ? a : gcd(b, a % b);
-        }
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
 
-        // 分子・分母が30以下で、2, 3, 5で約分可能な良問リスト
-        const QUESTION_BANK = [
-            // 2で割れる
-            {n:2, d:4}, {n:4, d:6}, {n:6, d:8}, {n:6, d:10}, {n:8, d:10},
-            {n:4, d:12}, {n:6, d:12}, {n:10, d:12}, {n:8, d:14}, {n:12, d:16},
-            {n:14, d:18}, {n:16, d:20}, {n:10, d:22}, {n:12, d:24}, {n:14, d:28},
-            // 3で割れる
-            {n:3, d:6}, {n:3, d:9}, {n:6, d:9}, {n:3, d:12}, {n:9, d:12},
-            {n:6, d:15}, {n:9, d:15}, {n:12, d:15}, {n:9, d:18}, {n:15, d:18},
-            {n:12, d:21}, {n:15, d:21}, {n:15, d:24}, {n:18, d:27}, {n:21, d:30},
-            // 5で割れる
-            {n:5, d:10}, {n:5, d:15}, {n:10, d:15}, {n:5, d:20}, {n:10, d:20},
-            {n:15, d:20}, {n:10, d:25}, {n:15, d:25}, {n:20, d:25}, {n:15, d:30},
-            {n:20, d:30}, {n:25, d:30}
-        ];
+      const now = audioCtx.currentTime;
 
-        /* ===================================================================
-           3. GAME STATE
-           =================================================================== */
-        let state = {
-            mode: 5, // 5, 10, 20, or 'infinite'
-            qIndex: 1,
-            stars: 0,
-            currentQ: { n: 6, d: 12, simpleN: 1, simpleD: 2 },
-            target: 'num', // 'num' or 'den'
-            ansNum: '',
-            ansDen: '',
-            pizzaVisible: true,
-            timerTimer: null,
-            elapsedSec: 0
-        };
+      if (type === 'select') {
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      } else if (type === 'correct') {
+        // ピンポン（和音）
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'wrong') {
+        // ブブー
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'fanfare') {
+        // ファンファーレ
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.frequency.setValueAtTime(freq, now + idx * 0.12);
+          g.gain.setValueAtTime(0.2, now + idx * 0.12);
+          g.gain.linearRampToValueAtTime(0.01, now + idx * 0.12 + 0.3);
+          o.start(now + idx * 0.12);
+          o.stop(now + idx * 0.12 + 0.3);
+        });
+      }
+    }
 
-        // DOM Elements
-        const startScreen = document.getElementById('startScreen');
-        const gameScreen = document.getElementById('gameScreen');
-        const resultScreen = document.getElementById('resultScreen');
+    /* ===================================================
+       3. アプリの状態管理 & ロジック
+       =================================================== */
+    let currentMode = 'easy'; // 'easy' or 'hard'
+    let totalQuestions = 5;
+    let currentQuestionIdx = 0;
+    let correctCount = 0;
+    let startTime = null;
 
-        const qNumerator = document.getElementById('qNumerator');
-        const qDenominator = document.getElementById('qDenominator');
-        const ansNumText = document.getElementById('ansNumText');
-        const ansDenText = document.getElementById('ansDenText');
+    let currentProblem = { origNum: 0, origDen: 0, ansNum: 0, ansDen: 0 };
+    let selectedInput = 'den'; // 初期フォーカスは「分母(den)」
 
-        const inputNumBtn = document.getElementById('inputNumBtn');
-        const inputDenBtn = document.getElementById('inputDenBtn');
+    function gcd(a, b) {
+      return b === 0 ? a : gcd(b, a % b);
+    }
 
-        const questionNumText = document.getElementById('questionNumText');
-        const starScore = document.getElementById('starScore');
-        const timerBadge = document.getElementById('timerBadge');
-        const timerText = document.getElementById('timerText');
+    /* 問題生成（初級：約分前が20未満＆1ステップ、上級：標準） */
+    function generateProblem(mode) {
+      const primes = [2, 3, 5];
+      let ansNum, ansDen, factor;
 
-        const pizzaArea = document.getElementById('pizzaArea');
-        const pizzaOrigText = document.getElementById('pizzaOrigText');
-        const pizzaAnsText = document.getElementById('pizzaAnsText');
-        const pizzaOrigCanvas = document.getElementById('pizzaOrigCanvas');
-        const pizzaAnsCanvas = document.getElementById('pizzaAnsCanvas');
+      if (mode === 'easy') {
+        // 初級：割る数は2,3,5のいずれか1つ（1ステップ）で、約分前の分子・分母がどちらも20未満
+        do {
+          ansNum = Math.floor(Math.random() * 8) + 1; // 1~8
+          ansDen = Math.floor(Math.random() * 8) + 2; // 2~9
+          factor = primes[Math.floor(Math.random() * primes.length)];
+        } while (
+          ansNum >= ansDen || 
+          gcd(ansNum, ansDen) !== 1 || 
+          (ansNum * factor) >= 20 || 
+          (ansDen * factor) >= 20
+        );
+      } else {
+        // 上級：約分前が30以下程度
+        do {
+          ansNum = Math.floor(Math.random() * 8) + 1;
+          ansDen = Math.floor(Math.random() * 8) + 2;
+          factor = primes[Math.floor(Math.random() * primes.length)];
+          // たまに公約数を大きくする
+          if (Math.random() > 0.5) {
+            factor *= primes[Math.floor(Math.random() * 2)]; // x2 or x3
+          }
+        } while (
+          ansNum >= ansDen || 
+          gcd(ansNum, ansDen) !== 1 || 
+          (ansNum * factor) > 30 || 
+          (ansDen * factor) > 30
+        );
+      }
 
-        const stampOverlay = document.getElementById('stampOverlay');
+      return {
+        origNum: ansNum * factor,
+        origDen: ansDen * factor,
+        ansNum: ansNum,
+        ansDen: ansDen
+      };
+    }
 
-        /* ===================================================================
-           4. INIT & EVENT BINDINGS
-           =================================================================== */
-        window.addEventListener('DOMContentLoaded', () => {
-            bindEvents();
-            setupKeyboardNav();
+    /* 画面遷移 */
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    function showStartScreen() {
+      showScreen('start-screen');
+    }
+
+    function startGame(mode, count) {
+      playSound('select');
+      currentMode = mode;
+      totalQuestions = count;
+      currentQuestionIdx = 0;
+      correctCount = 0;
+      startTime = new Date();
+
+      document.getElementById('mode-badge').innerText = mode === 'easy' ? '🌱 初級モード' : '🔥 上級モード';
+      document.getElementById('mode-badge').style.backgroundColor = mode === 'easy' ? '#4ade80' : '#fb923c';
+
+      showScreen('game-screen');
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+      if (currentQuestionIdx >= totalQuestions) {
+        endGame();
+        return;
+      }
+
+      currentProblem = generateProblem(currentMode);
+
+      // UI描画
+      document.getElementById('orig-num').innerText = currentProblem.origNum;
+      document.getElementById('orig-den').innerText = currentProblem.origDen;
+      document.getElementById('input-num').innerText = '';
+      document.getElementById('input-den').innerText = '';
+
+      // プログレスバー
+      const progress = totalQuestions === Infinity ? 100 : (currentQuestionIdx / totalQuestions) * 100;
+      document.getElementById('progress-bar').style.width = `${progress}%`;
+
+      // ヒントボタンリセット
+      [2, 3, 5].forEach(k => {
+        document.getElementById(`hint-${k}`).classList.remove('active');
+      });
+
+      // ⭐ 要望①：初期フォーカスを「分母(den)」にする
+      selectInput('den');
+
+      // ピザ描画
+      drawPizza('viz-orig', currentProblem.origNum, currentProblem.origDen);
+      drawPizza('viz-ans', 0, 1);
+    }
+
+    /* カーソル選択 */
+    function selectInput(target) {
+      playSound('select');
+      selectedInput = target;
+      document.getElementById('input-num').classList.toggle('active', target === 'num');
+      document.getElementById('input-den').classList.toggle('active', target === 'den');
+    }
+
+    /* テンキー押下 */
+    function pressNum(num) {
+      playSound('select');
+      const box = document.getElementById(`input-${selectedInput}`);
+      box.innerText = num; // 1桁制限
+
+      // ピザリアルタイム更新
+      updateAnsViz();
+
+      if (selectedInput === 'den') {
+        // ⭐ 要望②：分母を入力したら自動で分子(num)へ移動
+        selectInput('num');
+      } else if (selectedInput === 'num') {
+        // 両方埋まったかチェック
+        checkAutoSubmit();
+      }
+    }
+
+    /* クリア（なおす）押下 */
+    function pressClear() {
+      playSound('select');
+      const box = document.getElementById(`input-${selectedInput}`);
+      if (box.innerText !== '') {
+        box.innerText = '';
+      } else if (selectedInput === 'num') {
+        // 分子が空の状態で消すと分母へフォーカスが戻る
+        selectInput('den');
+      }
+      updateAnsViz();
+    }
+
+    /* ⭐ 要望③：分母と分子が揃ったら自動答え合わせ */
+    function checkAutoSubmit() {
+      const numVal = document.getElementById('input-num').innerText;
+      const denVal = document.getElementById('input-den').innerText;
+
+      if (numVal !== '' && denVal !== '') {
+        setTimeout(() => {
+          checkAnswer();
+        }, 300); // 0.3秒だけ入力を見せてから自動判定
+      }
+    }
+
+    function updateAnsViz() {
+      const numVal = parseInt(document.getElementById('input-num').innerText) || 0;
+      const denVal = parseInt(document.getElementById('input-den').innerText) || 1;
+      drawPizza('viz-ans', numVal, denVal);
+    }
+
+    /* ヒント確認 */
+    function checkHint(factor) {
+      playSound('select');
+      const btn = document.getElementById(`hint-${factor}`);
+      if (currentProblem.origNum % factor === 0 && currentProblem.origDen % factor === 0) {
+        btn.classList.add('active');
+      } else {
+        btn.style.opacity = '0.3';
+        setTimeout(() => { btn.style.opacity = '1'; }, 500);
+      }
+    }
+
+    /* 答え合わせ */
+    function checkAnswer() {
+      const userNum = parseInt(document.getElementById('input-num').innerText);
+      const userDen = parseInt(document.getElementById('input-den').innerText);
+
+      if (isNaN(userNum) || isNaN(userDen)) return;
+
+      if (userNum === currentProblem.ansNum && userDen === currentProblem.ansDen) {
+        // 正解
+        playSound('correct');
+        showHanamaru();
+        correctCount++;
+        currentQuestionIdx++;
+        setTimeout(() => {
+          nextQuestion();
+        }, 1200);
+      } else {
+        // 不正解
+        playSound('wrong');
+        const layout = document.querySelector('.game-layout');
+        layout.style.transform = 'translateX(-10px)';
+        setTimeout(() => layout.style.transform = 'translateX(10px)', 50);
+        setTimeout(() => layout.style.transform = 'translateX(-10px)', 100);
+        setTimeout(() => layout.style.transform = 'translateX(0)', 150);
+      }
+    }
+
+    function showHanamaru() {
+      const el = document.getElementById('hanamaru');
+      el.classList.add('show');
+      setTimeout(() => {
+        el.classList.remove('show');
+      }, 1000);
+    }
+
+    /* リザルト画面 */
+    function endGame() {
+      playSound('fanfare');
+      showScreen('result-screen');
+      startConfetti();
+
+      const elapsed = Math.floor((new Date() - startTime) / 1000);
+      const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const secs = String(elapsed % 60).padStart(2, '0');
+
+      if (totalQuestions === Infinity) {
+        document.getElementById('result-score').innerText = `${correctCount} 問正解！`;
+      } else {
+        document.getElementById('result-score').innerText = `${totalQuestions} / ${totalQuestions} 問正解！`;
+      }
+      document.getElementById('result-time').innerText = `${mins}:${secs}`;
+    }
+
+    /* ピザ（円グラフ）描画 */
+    function drawPizza(canvasId, num, den) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const radius = 90;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (den <= 0) den = 1;
+      const sliceAngle = (Math.PI * 2) / den;
+
+      // 背景の円
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // 分子部分を塗る
+      for (let i = 0; i < num && i < den; i++) {
+        const start = -Math.PI / 2 + i * sliceAngle;
+        const end = start + sliceAngle;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, start, end);
+        ctx.closePath();
+        ctx.fillStyle = '#38bdf8';
+        ctx.fill();
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      // 枠線グリッド
+      for (let i = 0; i < den; i++) {
+        const angle = -Math.PI / 2 + i * sliceAngle;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    /* キーボード入力対応（リモコン/テンキー） */
+    window.addEventListener('keydown', (e) => {
+      const activeScreen = document.querySelector('.screen.active').id;
+      if (activeScreen !== 'game-screen') return;
+
+      if (e.key >= '1' && e.key <= '9') {
+        pressNum(parseInt(e.key));
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        pressClear();
+      } else if (e.key === 'ArrowUp') {
+        selectInput('num');
+      } else if (e.key === 'ArrowDown') {
+        selectInput('den');
+      } else if (e.key === 'Enter') {
+        checkAnswer();
+      }
+    });
+
+    /* 紙吹雪（Confetti）演出 */
+    function startConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 1920;
+      canvas.height = 1080;
+
+      const particles = [];
+      const colors = ['#f43f5e', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'];
+
+      for (let i = 0; i < 120; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: Math.random() * 12 + 6,
+          speedY: Math.random() * 5 + 3,
+          speedX: Math.random() * 2 - 1,
+          rot: Math.random() * 360
+        });
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.y += p.speedY;
+          p.x += p.speedX;
+          p.rot += 2;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rot * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
         });
 
-        function bindEvents() {
-            // Mode buttons
-            document.querySelectorAll('.mode-select-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const count = btn.getAttribute('data-count');
-                    startGame(count === 'infinite' ? 'infinite' : parseInt(count, 10));
-                });
-            });
-
-            // Target switches
-            inputNumBtn.addEventListener('click', () => setTarget('num'));
-            inputDenBtn.addEventListener('click', () => setTarget('den'));
-            document.getElementById('switchTargetBtn').addEventListener('click', () => {
-                snd.playTap();
-                setTarget(state.target === 'num' ? 'den' : 'num');
-            });
-
-            // Keypad
-            document.querySelectorAll('.key-btn').forEach(btn => {
-                btn.addEventListener('click', () => pressDigit(btn.getAttribute('data-num')));
-            });
-
-            document.getElementById('bsKeyBtn').addEventListener('click', pressBackspace);
-            document.getElementById('clearKeyBtn').addEventListener('click', pressClear);
-            document.getElementById('submitAnswerBtn').addEventListener('click', checkAnswer);
-
-            // Controls
-            document.getElementById('exitGameBtn').addEventListener('click', gotoStart);
-            document.getElementById('skipGameBtn').addEventListener('click', skipQuestion);
-            document.getElementById('retryBtn').addEventListener('click', () => startGame(state.mode));
-            document.getElementById('homeBtn').addEventListener('click', gotoStart);
-
-            // Toggles
-            document.getElementById('togglePizzaBtn').addEventListener('click', togglePizza);
-            document.getElementById('soundToggleBtn').addEventListener('click', toggleSound);
-            document.getElementById('tvModeBtn').addEventListener('click', toggleFullscreen);
-
-            // Hints
-            document.querySelectorAll('.hint-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const divisor = parseInt(btn.getAttribute('data-div'), 10);
-                    snd.playTap();
-                    showHint(divisor);
-                });
-            });
+        if (particles.some(p => p.y < canvas.height)) {
+          requestAnimationFrame(render);
         }
-
-        /* ===================================================================
-           5. GAME ENGINE
-           =================================================================== */
-        function startGame(mode) {
-            snd.playTap();
-            state.mode = mode;
-            state.qIndex = 1;
-            state.stars = 0;
-            state.elapsedSec = 0;
-
-            starScore.innerText = state.stars;
-
-            startScreen.classList.add('hidden');
-            resultScreen.classList.add('hidden');
-            gameScreen.classList.remove('hidden');
-            gameScreen.classList.add('flex');
-
-            if (mode !== 'infinite') {
-                timerBadge.classList.remove('hidden');
-                timerBadge.classList.add('flex');
-                startTimer();
-            } else {
-                timerBadge.classList.add('hidden');
-                clearInterval(state.timerTimer);
-            }
-
-            nextQuestion();
-        }
-
-        function gotoStart() {
-            snd.playTap();
-            clearInterval(state.timerTimer);
-            gameScreen.classList.add('hidden');
-            resultScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
-        }
-
-        function startTimer() {
-            clearInterval(state.timerTimer);
-            const startTime = Date.now();
-            state.timerTimer = setInterval(() => {
-                state.elapsedSec = Math.floor((Date.now() - startTime) / 1000);
-                const m = Math.floor(state.elapsedSec / 60).toString().padStart(2, '0');
-                const s = (state.elapsedSec % 60).toString().padStart(2, '0');
-                timerText.innerText = `${m}:${s}`;
-            }, 1000);
-        }
-
-        function nextQuestion() {
-            const raw = QUESTION_BANK[Math.floor(Math.random() * QUESTION_BANK.length)];
-            const g = gcd(raw.n, raw.d);
-
-            state.currentQ = {
-                n: raw.n,
-                d: raw.d,
-                simpleN: raw.n / g,
-                simpleD: raw.d / g
-            };
-
-            state.ansNum = '';
-            state.ansDen = '';
-            updateInputUI();
-            setTarget('num');
-
-            qNumerator.innerText = state.currentQ.n;
-            qDenominator.innerText = state.currentQ.d;
-
-            if (state.mode === 'infinite') {
-                questionNumText.innerText = `だい ${state.qIndex} もん (むげん)`;
-            } else {
-                questionNumText.innerText = `だい ${state.qIndex} / ${state.mode} もん`;
-            }
-
-            stampOverlay.classList.add('hidden');
-            if (state.pizzaVisible) drawPizzaDiagrams();
-        }
-
-        function setTarget(target) {
-            state.target = target;
-            if (target === 'num') {
-                inputNumBtn.classList.add('input-box-active');
-                inputDenBtn.classList.remove('input-box-active');
-            } else {
-                inputDenBtn.classList.add('input-box-active');
-                inputNumBtn.classList.remove('input-box-active');
-            }
-        }
-
-        function pressDigit(digit) {
-            snd.playTap();
-            if (state.target === 'num') {
-                if (state.ansNum.length < 2) state.ansNum += digit;
-            } else {
-                if (state.ansDen.length < 2) state.ansDen += digit;
-            }
-            updateInputUI();
-            if (state.pizzaVisible) drawPizzaDiagrams();
-        }
-
-        function pressBackspace() {
-            snd.playTap();
-            if (state.target === 'num') {
-                state.ansNum = state.ansNum.slice(0, -1);
-            } else {
-                state.ansDen = state.ansDen.slice(0, -1);
-            }
-            updateInputUI();
-            if (state.pizzaVisible) drawPizzaDiagrams();
-        }
-
-        function pressClear() {
-            snd.playTap();
-            if (state.target === 'num') {
-                state.ansNum = '';
-            } else {
-                state.ansDen = '';
-            }
-            updateInputUI();
-            if (state.pizzaVisible) drawPizzaDiagrams();
-        }
-
-        function updateInputUI() {
-            ansNumText.innerText = state.ansNum || '?';
-            ansDenText.innerText = state.ansDen || '?';
-        }
-
-        /* ===================================================================
-           6. ANSWER CHECKING
-           =================================================================== */
-        function checkAnswer() {
-            const uN = parseInt(state.ansNum, 10);
-            const uD = parseInt(state.ansDen, 10);
-
-            if (isNaN(uN) || isNaN(uD) || uD === 0) {
-                snd.playWrong();
-                showNotice("数字を 入力してね！");
-                return;
-            }
-
-            const isFullyReduced = (uN === state.currentQ.simpleN) && (uD === state.currentQ.simpleD);
-            const isEquivalent = (uN * state.currentQ.d === uD * state.currentQ.n);
-
-            if (isFullyReduced) {
-                snd.playCorrect();
-                stampOverlay.classList.remove('hidden');
-                state.stars++;
-                starScore.innerText = state.stars;
-
-                if (typeof confetti === 'function') {
-                    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-                }
-
-                setTimeout(() => {
-                    if (state.mode !== 'infinite' && state.qIndex >= state.mode) {
-                        finishRound();
-                    } else {
-                        state.qIndex++;
-                        nextQuestion();
-                    }
-                }, 1300);
-
-            } else if (isEquivalent) {
-                snd.playWrong();
-                showNotice("⭕ おしい！もっと 小さく われるよ！");
-            } else {
-                snd.playWrong();
-                showNotice("❌ ちがうみたい。もう一度 計算してみよう！");
-            }
-        }
-
-        function skipQuestion() {
-            snd.playTap();
-            state.qIndex++;
-            nextQuestion();
-        }
-
-        function finishRound() {
-            clearInterval(state.timerTimer);
-            snd.playFanfare();
-
-            gameScreen.classList.add('hidden');
-            resultScreen.classList.remove('hidden');
-            resultScreen.classList.add('flex');
-
-            document.getElementById('finalStars').innerText = `⭐ ${state.stars}`;
-            const m = Math.floor(state.elapsedSec / 60).toString().padStart(2, '0');
-            const s = (state.elapsedSec % 60).toString().padStart(2, '0');
-            document.getElementById('finalTime').innerText = `${m}:${s}`;
-
-            if (typeof confetti === 'function') {
-                confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 } });
-            }
-        }
-
-        /* ===================================================================
-           7. VISUAL PIZZA & HINTS
-           =================================================================== */
-        function togglePizza() {
-            snd.playTap();
-            state.pizzaVisible = !state.pizzaVisible;
-            if (state.pizzaVisible) {
-                pizzaArea.classList.remove('hidden');
-                pizzaArea.classList.add('flex');
-                drawPizzaDiagrams();
-            } else {
-                pizzaArea.classList.add('hidden');
-                pizzaArea.classList.remove('flex');
-            }
-        }
-
-        function drawPizzaDiagrams() {
-            const qN = state.currentQ.n;
-            const qD = state.currentQ.d;
-            pizzaOrigText.innerText = `${qN}/${qD}`;
-            renderSliceCanvas(pizzaOrigCanvas, qN, qD, '#ff4757');
-
-            const aN = parseInt(state.ansNum, 10) || 0;
-            const aD = parseInt(state.ansDen, 10) || 1;
-            pizzaAnsText.innerText = `${aN}/${aD}`;
-            renderSliceCanvas(pizzaAnsCanvas, aN, aD, '#2ed573');
-        }
-
-        function renderSliceCanvas(canvas, num, den, color) {
-            const ctx = canvas.getContext('2d');
-            const w = canvas.width;
-            const h = canvas.height;
-            const cx = w / 2;
-            const cy = h / 2;
-            const r = w / 2 - 4;
-
-            ctx.clearRect(0, 0, w, h);
-            if (den <= 0) return;
-
-            const slice = (2 * Math.PI) / den;
-
-            for (let i = 0; i < den; i++) {
-                const startA = i * slice - Math.PI / 2;
-                const endA = startA + slice;
-
-                ctx.beginPath();
-                ctx.moveTo(cx, cy);
-                ctx.arc(cx, cy, r, startA, endA);
-                ctx.closePath();
-
-                if (i < num) {
-                    ctx.fillStyle = color;
-                    ctx.fill();
-                } else {
-                    ctx.fillStyle = '#f1f2f6';
-                    ctx.fill();
-                }
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-        }
-
-        function showHint(div) {
-            const n = state.currentQ.n;
-            const d = state.currentQ.d;
-            if (n % div === 0 && d % div === 0) {
-                showNotice(`💡 [ ${div} ] でわると ➔ ${n / div} / ${d / div} になるよ！`);
-            } else {
-                showNotice(`❌ ${n} と ${d} は 両方 [ ${div} ] では われなさそう...`);
-            }
-        }
-
-        /* ===================================================================
-           8. KEYBOARD / TV REMOTE NAVIGATION
-           =================================================================== */
-        function setupKeyboardNav() {
-            document.addEventListener('keydown', (e) => {
-                if (e.key >= '0' && e.key <= '9') {
-                    pressDigit(e.key);
-                } else if (e.key === 'Backspace') {
-                    pressBackspace();
-                } else if (e.key === 'Delete') {
-                    pressClear();
-                } else if (e.key === 'Enter' || e.key === ' ') {
-                    if (!gameScreen.classList.contains('hidden')) checkAnswer();
-                } else if (e.key === 'ArrowUp') {
-                    setTarget('num');
-                } else if (e.key === 'ArrowDown') {
-                    setTarget('den');
-                }
-            });
-        }
-
-        /* ===================================================================
-           9. UTILS
-           =================================================================== */
-        function showNotice(msg) {
-            const popup = document.createElement('div');
-            popup.className = 'fixed top-14 left-1/2 -translate-x-1/2 bg-amber-900 text-white font-black text-sm md:text-base px-6 py-2.5 rounded-2xl shadow-2xl z-50 border-2 border-yellow-300 fade-in pointer-events-none';
-            popup.innerText = msg;
-            document.body.appendChild(popup);
-            setTimeout(() => popup.remove(), 2200);
-        }
-
-        function toggleSound() {
-            snd.enabled = !snd.enabled;
-            document.getElementById('soundIcon').innerText = snd.enabled ? '🔊' : '🔇';
-            document.getElementById('soundLabel').innerText = snd.enabled ? 'おと: オン' : 'おと: オフ';
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-            }
-        }
-    </script>
+      }
+      render();
+    }
+  </script>
 </body>
 </html>
